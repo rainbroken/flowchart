@@ -1,0 +1,94 @@
+flowchart TB
+    %% =========================
+    %% 系统架构图 - 整洁版
+    %% =========================
+
+ %% ---------- 同步层 ----------
+    subgraph L2["① 硬同步 / 时间基准"]
+        direction LR
+        SYNC["硬件同步信号<br/>Trigger / PPS / 时间戳"]
+    end
+
+    %% ---------- 传感器层 ----------
+    subgraph L1["② 硬件传感器层"]
+        direction LR
+        CAM["Camera<br/>相机图像"]
+        LIDAR["LiDAR<br/>激光雷达点云"]
+        IMU["IMU<br/>惯性测量数据"]
+    end
+
+   
+
+    %% ---------- ROS驱动层 ----------
+    subgraph L3["③  ROS 驱动与 Topic 输入层"]
+        direction LR
+        CAM_DRV["相机驱动<br/>/camera1/image"]
+        LIDAR_DRV["Livox 驱动<br/>/livox/lidar"]
+        IMU_DRV["IMU Topic<br/>/livox/imu"]
+    end
+
+    %% ---------- 预处理层 ----------
+    subgraph L4["④ 前端预处理层"]
+        direction LR
+        IMG_PRE["图像预处理<br/>去畸变 / Patch 提取"]
+        PCD_PRE["点云预处理<br/>滤波 / 降采样"]
+        IMU_PRE["IMU 预积分<br/>状态预测"]
+    end
+
+    %% ---------- 融合核心 ----------
+    subgraph L5["⑤ 核心融合层"]
+        direction LR
+        VIO["Visual Update<br/>视觉光度误差更新"]
+        LIO["LiDAR Update<br/>点云到地图匹配"]
+        ESIKF["ESIKF<br/>误差状态迭代卡尔曼滤波"]
+    end
+
+    %% ---------- 地图层 ----------
+    subgraph L6["⑥ 统一地图层"]
+        direction LR
+        VOXEL["Unified Voxel Map<br/>统一体素地图"]
+        GEO["几何地图信息<br/>点云 / 平面 / 法向"]
+        PATCH["视觉 Patch 信息<br/>绑定到地图点"]
+    end
+
+    %% ---------- 输出层 ----------
+    subgraph L7["⑦ 系统输出层"]
+        direction LR
+        ODOM["位姿估计<br/>Odometry / Trajectory"]
+        MAP_OUT["稠密彩色地图<br/>Dense RGB Map"]
+        RVIZ["RViz2 可视化"]
+        PCD["点云PCD保存"]
+    end
+
+    %% ---------- 主数据流 ----------
+    SYNC --> CAM
+    SYNC --> LIDAR
+    SYNC --> IMU
+
+    CAM --> CAM_DRV
+    LIDAR --> LIDAR_DRV
+    IMU --> IMU_DRV
+
+    CAM_DRV --> IMG_PRE
+    LIDAR_DRV --> PCD_PRE
+    IMU_DRV --> IMU_PRE
+
+    IMG_PRE --> VIO
+    PCD_PRE --> LIO
+    IMU_PRE --> ESIKF
+
+    VIO --> ESIKF
+    LIO --> ESIKF
+
+    ESIKF --> VOXEL
+
+    VOXEL --> GEO
+    VOXEL --> PATCH
+
+    ESIKF --> ODOM
+    VOXEL --> MAP_OUT
+
+    ODOM --> RVIZ
+    MAP_OUT --> RVIZ
+
+    RVIZ --> PCD

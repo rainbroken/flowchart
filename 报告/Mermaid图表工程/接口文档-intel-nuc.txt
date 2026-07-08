@@ -1,0 +1,70 @@
+flowchart TB
+    %% =========================
+    %% 硬件接口文档图
+    %% 主控: Intel NUC
+    %% 相机: USB Camera
+    %% 雷达: Livox MID360
+    %% 电源: 24V Battery + 24V->19V DC-DC
+    %% =========================
+
+    %% ---------- 电源层 ----------
+    subgraph PWR["① 电源系统"]
+        direction LR
+        BAT["24V 电池<br/>Battery Pack"]
+        BUCK["降压模组<br/>DC-DC 24V → 19V<br/> 分电接线端子"]
+    end
+
+    %% ---------- 主控层 ----------
+    subgraph CTRL["② 主控计算单元"]
+        direction TB
+        NUC["Intel NUC<br/>Ubuntu 22.04 - ROS2 Humble<br/>"]
+        USB_PORT["USB 接口"]
+        ETH_PORT["RJ45 网口<br/>"]
+    end
+
+    %% ---------- 传感器层 ----------
+    subgraph SENSOR["③ 传感器系统"]
+        direction TB
+        CAM[USB 相机]
+        MID360[Livox MID360]
+    end
+
+    %% ---------- 软件 Topic 层 ----------
+    subgraph ROS["④ ROS2 数据接口"]
+        direction TB
+        CAM_TOPIC["/camera/image_raw<br/>"]
+        LIDAR_TOPIC["/livox/lidar"]
+        IMU_TOPIC["/livox/imu"]
+
+    end
+
+    %% ---------- 电源连接 ----------
+    BAT -->|"24V DC"| BUCK
+    BUCK -->|"19V DC"| NUC
+
+    BUCK -.->|"雷达供电<br/>按 MID360 电源要求接入"| MID360
+
+    %% ---------- 数据连接 ----------
+    NUC --> USB_PORT
+    USB_PORT -->|"USB 数据线"| CAM
+
+    NUC --> ETH_PORT
+    ETH_PORT -->|"以太网数据线<br/>"| MID360
+
+    %% ---------- ROS 数据流 ----------
+    CAM --> CAM_TOPIC
+    MID360 --> LIDAR_TOPIC
+    MID360 --> IMU_TOPIC
+
+
+
+    %% ---------- 样式 ----------
+    classDef power fill:#fff3cd,stroke:#d39e00,stroke-width:1px;
+    classDef compute fill:#d1ecf1,stroke:#0c5460,stroke-width:1px;
+    classDef sensor fill:#e2e3e5,stroke:#383d41,stroke-width:1px;
+    classDef ros fill:#d4edda,stroke:#155724,stroke-width:1px;
+
+    class BAT,PDB,BUCK power;
+    class NUC,USB_PORT,ETH_PORT compute;
+    class CAM,MID360 sensor;
+    class CAM_TOPIC,LIDAR_TOPIC,IMU_TOPIC,FASTLIVO ros;
