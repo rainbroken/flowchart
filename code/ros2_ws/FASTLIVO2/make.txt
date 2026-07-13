@@ -1,0 +1,170 @@
+1.eigen编译报错
+https://blog.csdn.net/qq_44339029/article/details/142343425
+
+sudo ln -s /usr/include/eigen3/Eigen /usr/include/Eigen
+
+
+2.pcl安装
+sudo apt-get install ros-humble-pcl-ros
+sudo apt-get install libpcl-dev
+sudo apt-get install pcl-tools
+
+3.rgb_vikit
+适用于humble
+	https://github.com/SuperLDG/rpg_vikit.git
+	
+4.编译报错
+
+
+Current CPU archtecture: x86_64
+CMake Error at CMakeLists.txt:32 (FIND_PACKAGE):
+  By not providing "FindSophus.cmake" in CMAKE_MODULE_PATH this project has
+  asked CMake to find a package configuration file provided by "Sophus", but
+  CMake did not find one.
+
+  Could not find a package configuration file provided by "Sophus" with any
+  of the following names:
+
+    SophusConfig.cmake
+    sophus-config.cmake
+
+  Add the installation prefix of "Sophus" to CMAKE_PREFIX_PATH or set
+  "Sophus_DIR" to a directory containing one of the above files.  If "Sophus"
+  provides a separate development package or SDK, be sure it has been
+  installed.
+---
+
+sophus编译流程
+	git clone https://github.com/strasdat/Sophus.git
+	cd Sophus
+	git checkout a621ff
+	mkdir build && cd build && cmake ..
+	make
+	sudo make install
+
+------------------------------------------------------------------------------------------------
+
+
+Starting >>> vikit_ros
+--- stderr: vikit_py                                                                              
+/home/rain/Ros_ws/FASTLIVO2/src/rpg_vikit/vikit_py/setup.py:3: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives
+  from distutils.core import setup
+/usr/lib/python3.10/distutils/dist.py:274: UserWarning: Unknown distribution option: 'install_requires'
+  warnings.warn(msg)
+/usr/lib/python3.10/distutils/dist.py:274: UserWarning: Unknown distribution option: 'zip_safe'
+  warnings.warn(msg)
+---
+
+distutils 比较老，Python 3.10 开始会提示弃用，Python 3.12 以后影响会更明显。
+同时，distutils 不认识这些 setuptools 参数：
+install_requires
+zip_safe
+
+把src/rpg_vikit/vikit_py/setup.py
+from distutils.core import setup
+改成
+from setuptools import setup
+
+------------------------------------------------------------------------------------------------
+
+Starting >>> vikit_py
+--- stderr: vikit_common                                         
+Current CPU archtecture: x86_64
+CMake Error at CMakeLists.txt:50 (ADD_LIBRARY):
+  Target "vikit_common" links to target "Sophus::Sophus" but the target was
+  not found.  Perhaps a find_package() call is missing for an IMPORTED
+  target, or an ALIAS target is missing?
+
+
+CMake Error at CMakeLists.txt:72 (ADD_EXECUTABLE):
+  Target "test_vk_common_triangulation" links to target "Sophus::Sophus" but
+  the target was not found.  Perhaps a find_package() call is missing for an
+  IMPORTED target, or an ALIAS target is missing?
+
+
+CMake Error at CMakeLists.txt:79 (ADD_EXECUTABLE):
+  Target "test_vk_common_patch_score" links to target "Sophus::Sophus" but
+  the target was not found.  Perhaps a find_package() call is missing for an
+  IMPORTED target, or an ALIAS target is missing?
+
+
+CMake Generate step failed.  Build files cannot be regenerated correctly.
+---
+
+去FASTLIVO2/src/rpg_vikit/vikit_common/CMakeLists.txt中修改
+line57 Sophus::Sophus 改成 Sophus
+
+------------------------------------------------------------------------------------------------
+
+--- stderr: usb_cam                                              
+In file included from /home/rain/ros_ws/FASTLIVO2/src/usb_cam/src/usb_cam_node.cpp:34:
+/home/rain/ros_ws/FASTLIVO2/src/usb_cam/include/usb_cam/usb_cam_node.hpp:38:10: fatal error: camera_info_manager/camera_info_manager.hpp: 没有那个文件或目录
+   38 | #include "camera_info_manager/camera_info_manager.hpp"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/usb_cam_node.dir/build.make:76：CMakeFiles/usb_cam_node.dir/src/usb_cam_node.cpp.o] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:189：CMakeFiles/usb_cam_node.dir/all] 错误 2
+gmake: *** [Makefile:146：all] 错误 2
+---
+解法
+	sudo apt install ros-humble-camera-info-manager
+
+
+------------------------------------------------------------------------------------------------
+
+--- stderr: vikit_common                                             
+In file included from /home/rain/ros_ws/FASTLIVO2/src/rpg_vikit/vikit_common/include/vikit/homography.h:22,
+                 from /home/rain/ros_ws/FASTLIVO2/src/rpg_vikit/vikit_common/src/homography.cpp:12:
+/home/rain/ros_ws/FASTLIVO2/src/rpg_vikit/vikit_common/include/vikit/math_utils.h:14:10: fatal error: sophus/se3.hpp: 没有那个文件或目录
+   14 | #include <sophus/se3.hpp>
+      |          ^~~~~~~~~~~~~~~~
+compilation terminated.
+gmake[2]: *** [CMakeFiles/vikit_common.dir/build.make:216：CMakeFiles/vikit_common.dir/src/homography.cpp.o] 错误 1
+gmake[2]: *** 正在等待未完成的任务....
+In file included from /home/rain/ros_ws/FASTLIVO2/src/rpg_vikit/vikit_common/src/math_utils.cpp:8:
+/home/rain/ros_ws/FASTLIVO2/src/rpg_vikit/vikit_common/include/vikit/math_utils.h:14:10: fatal error: sophus/se3.hpp: 没有那个文件或目录
+   14 | #include <sophus/se3.hpp>
+      |          ^~~~~~~~~~~~~~~~
+compilation terminated.
+
+将文件中的#include <sophus/se3.hpp> 改成 #include <sophus/se3.hpp>
+
+------------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------------
+
+
+
+5.相机驱动
+git clone https://github.com/ros-drivers/usb_cam.git
+
+然后修改
+# class CameraConfig(BaseModel):
+#     name: str = 'camera1'
+#     param_path: Path = Path(USB_CAM_DIR, 'config', 'params_1.yaml')
+#     remappings: Optional[List]
+#     namespace: Optional[str]
+class CameraConfig(BaseModel):
+    name: str
+    param_path: Path
+    remappings: List[Tuple[str, str]] = Field(default_factory=list)
+    namespace: str = ""
+
+上面的import修改为
+from pathlib import Path
+from typing import List, Optional, Tuple
+from ament_index_python.packages import get_package_share_directory
+from pydantic import BaseModel, root_validator, validator ,Field 
+
+然后找到
+def validate_root(cls, values)
+上面@root_validator改为
+@root_validator(skip_on_failure=True)
+
+6.loading fastlivo2 make error
+should do 
+  sudo apt install ros-humble-compressed-image-transport
+
+
+

@@ -1,0 +1,1 @@
+colcon build --parallel-workers 4 # limit 4 core build
